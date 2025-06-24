@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>BTC 实时价格告警</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highcharts@10.3.3/highcharts.js"></script>
+</head>
+<body>
+    <h1>BTC 实时价格告警</h1>
+    <div>
+        <b>最新BTC价格：</b><span id="price">--</span>
+    </div>
+    <div id="alert"></div>
+    <div id="chart-container" style="width: 100%; height: 400px;"></div>
+    <script>
+        var priceData = [];
+        var chart = Highcharts.chart('chart-container', {
+            chart: { type: 'line' },
+            title: { text: 'BTC 实时价格曲线' },
+            xAxis: { type: 'datetime' },
+            yAxis: { title: { text: '价格 (USDT)' } },
+            series: [{
+                name: 'BTC/USDT',
+                data: priceData
+            }]
+        });
+
+        var socket = io();
+        socket.on('btc_price', function(msg) {
+            var price = parseFloat(msg.price);
+            var now = (new Date()).getTime();
+            chart.series[0].addPoint([now, price], true, chart.series[0].data.length > 60);
+            document.getElementById('price').innerText = price;
+            console.log("最新BTC价格：", price);
+        });
+
+        socket.on('btc_alert', function(msg) {
+            document.getElementById('alert').innerHTML = "<b>告警：</b>" + msg.data;
+            alert(msg.data);
+        });
+    </script>
+</body>
+</html>
