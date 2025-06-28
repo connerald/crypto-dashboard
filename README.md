@@ -7,8 +7,8 @@
 - 操作系统：Linux (Ubuntu16.04)
 - JDK 1.8.0_162
 - Python 3.8+ (3.8.5)
-- Kafka（建议安装在 /usr/local/kafka）
-- Spark（建议安装在 /usr/local/spark）
+- Kafka 2.12-2.6.0（建议安装在 /usr/local/kafka）
+- Spark 3.2.0 （建议安装在 /usr/local/spark）
 - Kafka 和 Spark 连接用的 jar 包放入 Spark 路径中
 
 ## 安装依赖
@@ -16,6 +16,14 @@
 ```bash
 pip install -r requirements.txt
 ```
+
+下载 jar 包放入 Spark 目录
+- spark-token-provider-kafka-0-10_2.12-3.2.0.jar
+- spark-streaming-kafka-0-10_2.12-3.2.0.jar
+- spark-streaming-kafka-0-8_2.11-2.4.0.jar
+- spark-sql-kafka-0-10_2.12-3.2.0.jar
+- commons-pool2-2.9.0.jar
+- kafka-clients-2.6.0.jar
 
 ## 启动前的准备工作
 
