@@ -7,6 +7,7 @@ import json
 KAFKA_BROKER = "localhost:9092"
 PRICE_TOPIC = "btc_price"
 ALERT_TOPIC = "btc_alert"
+CHANGE_TOPIC = "btc_change"
 THRESHOLD = 0.003  # 0.3%
 
 # 创建SparkSession
@@ -39,15 +40,27 @@ windowed = price_df.groupBy(window(col("ts"), "1 minute")).agg(
 def process_batch(df, epoch_id):
     rows = df.collect()
     for row in rows:
+        producer = KafkaProducer(bootstrap_servers=KAFKA_BROKER)
+        
+        # 推送涨跌幅数据（无论是否超过阈值都推送）
+        change_data = {
+            "change": row.change,
+            "change_percent": row.change * 100,
+            "first_price": row.first_price,
+            "last_price": row.last_price
+        }
+        producer.send(CHANGE_TOPIC, json.dumps(change_data).encode("utf-8"))
+        
+        # 如果超过阈值，推送告警
         if abs(row.change) > THRESHOLD:
-            producer = KafkaProducer(bootstrap_servers=KAFKA_BROKER)
             alert = {
                 "alert": f"BTC价格{'上涨' if row.change > 0 else '下跌'}超0.3%，当前价格: {row.last_price:.2f}",
                 "change": row.change,
                 "price": row.last_price
             }
             producer.send(ALERT_TOPIC, json.dumps(alert).encode("utf-8"))
-            producer.close()
+        
+        producer.close()
 
 query = windowed.writeStream \
     .outputMode("update") \

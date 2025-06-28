@@ -14,5 +14,15 @@ def handle_btc_price(data):
     print("服务端收到价格数据：", data)
     emit('btc_price', data, broadcast=True)
 
+@socketio.on('btc_alert')
+def handle_btc_alert(data):
+    print("服务端收到告警数据：", data)
+    emit('btc_alert', data, broadcast=True)
+
+@socketio.on('btc_change')
+def handle_btc_change(data):
+    print("服务端收到涨跌幅数据：", data)
+    emit('btc_change', data, broadcast=True)
+
 if __name__ == '__main__':
     socketio.run(app, debug=True, host="127.0.0.1", port=5000)

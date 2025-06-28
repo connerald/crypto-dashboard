@@ -8,11 +8,19 @@
 </head>
 <body>
     <h1>BTC 实时价格告警</h1>
-    <div>
+    <div style="font-size: 18px; margin: 10px 0;">
         <b>最新BTC价格：</b><span id="price">--</span>
+        <span style="margin-left: 20px;">
+            <b>1分钟涨跌幅：</b><span id="change" style="font-weight: bold;">--</span>
+        </span>
     </div>
-    <div id="alert"></div>
+    <!-- 涨跌幅告警显示区域 -->
+    <div id="alert-container" style="margin: 20px 0; padding: 10px; background-color: #ffe6e6; border: 1px solid #ff9999; display: none;">
+        <h3>📈 涨跌幅预警</h3>
+        <div id="alert"></div>
+    </div>
     <div id="chart-container" style="width: 100%; height: 400px;"></div>
+    
     <script>
         var priceData = [];
         var chart = Highcharts.chart('chart-container', {
@@ -27,6 +35,8 @@
         });
 
         var socket = io();
+        
+        // 价格数据处理
         socket.on('btc_price', function(msg) {
             var price = parseFloat(msg.price);
             var now = (new Date()).getTime();
@@ -35,9 +45,35 @@
             console.log("最新BTC价格：", price);
         });
 
+        // 新增：涨跌幅数据处理
+        socket.on('btc_change', function(msg) {
+            var changePercent = parseFloat(msg.change_percent);
+            var changeElement = document.getElementById('change');
+            var changeText = changePercent.toFixed(2) + '%';
+            
+            // 根据涨跌设置颜色
+            if (changePercent > 0) {
+                changeElement.style.color = 'red';
+                changeText = '+' + changeText;
+            } else if (changePercent < 0) {
+                changeElement.style.color = 'green';
+            } else {
+                changeElement.style.color = 'black';
+            }
+            
+            changeElement.innerText = changeText;
+            console.log("1分钟涨跌幅：", changeText);
+        });
+
+        // 涨跌幅告警处理
         socket.on('btc_alert', function(msg) {
-            document.getElementById('alert').innerHTML = "<b>告警：</b>" + msg.data;
-            alert(msg.data);
+            document.getElementById('alert').innerHTML = msg.data;
+            document.getElementById('alert-container').style.display = 'block';
+            // 5秒后隐藏告警
+            setTimeout(function() {
+                document.getElementById('alert-container').style.display = 'none';
+            }, 5000);
+            console.log("收到涨跌幅告警：", msg.data);
         });
     </script>
 </body>

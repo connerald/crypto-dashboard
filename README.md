@@ -46,6 +46,7 @@ pip install -r requirements.txt
    ```bash
    /usr/local/kafka/bin/kafka-topics.sh --create --topic btc_price --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
    /usr/local/kafka/bin/kafka-topics.sh --create --topic btc_alert --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+   /usr/local/kafka/bin/kafka-topics.sh --create --topic btc_change --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
    ```
 
 4. **启动 Spark 服务**（如需使用 Spark Standalone 模式）

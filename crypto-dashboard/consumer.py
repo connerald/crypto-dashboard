@@ -25,9 +25,21 @@ def price_consumer():
         except Exception as e:
             print("解析价格数据出错：", e)
 
+def change_consumer():
+    consumer = KafkaConsumer('btc_change')
+    for msg in consumer:
+        try:
+            data = json.loads(msg.value.decode('utf8'))
+            change_percent = data.get('change_percent')
+            print("收到涨跌幅数据：", f"{change_percent:.2f}%")
+            sio.emit('btc_change', {'change_percent': change_percent})
+        except Exception as e:
+            print("解析涨跌幅数据出错：", e)
+
 if __name__ == '__main__':
     threading.Thread(target=alert_consumer, daemon=True).start()
     threading.Thread(target=price_consumer, daemon=True).start()
+    threading.Thread(target=change_consumer, daemon=True).start()
     import time
     while True:
         time.sleep(10)
