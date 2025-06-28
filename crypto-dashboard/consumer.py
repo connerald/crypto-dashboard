@@ -10,9 +10,14 @@ sio.connect('http://localhost:5000')
 def alert_consumer():
     consumer = KafkaConsumer('btc_alert')
     for msg in consumer:
-        alert = msg.value.decode('utf8')
-        print("收到告警数据：", alert)
-        sio.emit('btc_alert', {'data': alert})
+        try:
+            # 解析 JSON 数据
+            alert_data = json.loads(msg.value.decode('utf8'))
+            alert_message = alert_data.get('alert')  # 提取中文消息
+            print("收到告警数据：", alert_message)
+            sio.emit('btc_alert', {'data': alert_message})  # 只发送中文消息
+        except Exception as e:
+            print("解析告警数据出错：", e)
 
 def price_consumer():
     consumer = KafkaConsumer('btc_price')
