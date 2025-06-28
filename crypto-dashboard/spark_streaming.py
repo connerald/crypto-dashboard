@@ -53,8 +53,9 @@ def process_batch(df, epoch_id):
         
         # 如果超过阈值，推送告警
         if abs(row.change) > THRESHOLD:
+            threshold_percent = THRESHOLD * 100  # 将阈值转换为百分比
             alert = {
-                "alert": f"BTC价格{'上涨' if row.change > 0 else '下跌'}超0.3%，当前价格: {row.last_price:.2f}",
+                "alert": f"BTC价格{'上涨' if row.change > 0 else '下跌'}超{threshold_percent:.1f}%，当前价格: {row.last_price:.2f}",
                 "change": row.change,
                 "price": row.last_price
             }
