@@ -1,86 +1,35 @@
-# crypto-dashboard
+# Crypto Dashboard
 
-这是一份云计算与大数据技术的课程期末作业，目的是实现用binance接口监听价格动态。并使用 Kafka + Spark Streaming 实现实时流计算。
+一个持续演进的加密资产行情与实时数据处理项目。
 
-## 环境准备
+`main` 是当前开发主线，也代表访问仓库首页时看到的项目状态。项目正在从早期课程作业原型迁移为更易运行、测试和维护的现代化应用。
 
-- 操作系统：Linux (Ubuntu16.04)
-- JDK 1.8.0_162
-- Python 3.8+ (3.8.5)
-- Kafka 2.12-2.6.0（建议安装在 /usr/local/kafka）
-- Spark 3.2.0 （建议安装在 /usr/local/spark）
-- Kafka 和 Spark 连接用的 jar 包放入 Spark 路径中
+## 当前状态
 
-## 安装依赖
+当前代码保留了原型阶段的核心数据链路：
 
-```bash
-pip install -r requirements.txt
-```
+- 从 Binance 公共接口采集 BTC/USDT 行情
+- 通过 Kafka 传递价格、涨跌幅与告警消息
+- 使用 Spark Structured Streaming 进行窗口计算
+- 使用 Flask 和 Socket.IO 展示实时数据
 
-下载 jar 包放入 Spark 目录
-- spark-token-provider-kafka-0-10_2.12-3.2.0.jar
-- spark-streaming-kafka-0-10_2.12-3.2.0.jar
-- spark-streaming-kafka-0-8_2.11-2.4.0.jar
-- spark-sql-kafka-0-10_2.12-3.2.0.jar
-- commons-pool2-2.9.0.jar
-- kafka-clients-2.6.0.jar
+接下来的修改会直接提交到 `main`。现代化工作的重点包括开发环境标准化、配置与密钥管理、服务边界整理、自动化测试，以及运行与部署体验。
 
-## 启动前的准备工作
+> 项目正处于新版基线阶段，现有运行方式仍继承自旧原型；新的安装和启动说明会随实现同步更新。
 
-此处命令假设你的kafka和spark都安装在 /usr/local 目录下，请根据实际安装路径调整。
+## 历史课程作业
 
-1. **启动 Zookeeper 服务** 
-   这里使用前台启动
-   ```bash
-   cd /usr/local/kafka
-   bin/zookeeper-server-start.sh config/zookeeper.properties
-   ```
+旧课程作业已经冻结，不会随 `main` 的后续开发发生变化：
 
-2. **启动 Kafka 服务**
-   ```bash
-   cd /usr/local/kafka
-   bin/kafka-server-start.sh config/server.properties
-   ```
+- [浏览归档源码（2025-06-28）](https://github.com/connerald/crypto-dashboard/tree/archive/coursework-final-2025-06-28)
+- 归档标签：`archive/coursework-final-2025-06-28`
+- 归档提交：`712b0efee816725684e7b12b22d654c69a8c6049`
 
-3. **创建 Kafka Topic**  
-   ```bash
-   /usr/local/kafka/bin/kafka-topics.sh --create --topic btc_price --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-   /usr/local/kafka/bin/kafka-topics.sh --create --topic btc_alert --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-   /usr/local/kafka/bin/kafka-topics.sh --create --topic btc_change --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
-   ```
+原始环境要求、依赖安装和启动说明均保留在归档版本的 README 中。
 
-4. **启动 Spark 服务**（如需使用 Spark Standalone 模式）
-   ```bash
-   /usr/local/spark/sbin/start-all.sh
-   ```
+## 开发约定
 
-## 启动流程
-
-1. **启动币安数据采集（生产者）**
-   ```bash
-   python binance_producer.py
-   ```
-
-2. **启动 Spark Streaming 实时计算（记得改spark_streaming.py的路径）**
-   ```bash
-   /usr/local/spark/bin/spark-submit \
-   --master local[2] \
-   --conf spark.hadoop.fs.defaultFS=file:/// \
-   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.2.0,org.apache.kafka:kafka-clients:2.6.0 \
-   /home/hadoop/pythonworkspace/crypto-dashboard/crypto-dashboard/spark_streaming.py
-   ```
-
-3. **启动 Web 服务**
-   ```bash
-   python app.py
-   ```
-
-4. **启动告警消费者**
-   ```bash
-   python consumer.py
-   ```
-
-5. **访问前端页面**  
-   在浏览器中打开 [http://localhost:5000](http://localhost:5000)
-
----
+- `main` 是默认且唯一的长期开发分支。
+- 历史作业通过不可变标签保存，不复制到新版源码目录。
+- 文本文件统一使用 LF 行尾。
+- 每次推送应保持提交目的明确，并同步更新受影响的说明。
