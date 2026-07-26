@@ -1,10 +1,16 @@
+import os
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col, window, expr
 from pyspark.sql.types import StructType, DoubleType, LongType
 from kafka import KafkaProducer
 import json
 
-KAFKA_BROKER = "localhost:9092"
+KAFKA_BROKER = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+CHECKPOINT_LOCATION = os.getenv(
+    "SPARK_CHECKPOINT_LOCATION",
+    "/tmp/btc_checkpoint",
+)
 PRICE_TOPIC = "btc_price"
 ALERT_TOPIC = "btc_alert"
 CHANGE_TOPIC = "btc_change"
@@ -65,7 +71,7 @@ def process_batch(df, epoch_id):
 
 query = windowed.writeStream \
     .outputMode("update") \
-    .option("checkpointLocation", "/tmp/btc_checkpoint") \
+    .option("checkpointLocation", CHECKPOINT_LOCATION) \
     .foreachBatch(process_batch) \
     .start()
 

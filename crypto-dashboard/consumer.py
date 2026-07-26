@@ -1,14 +1,25 @@
+import os
+
 from kafka import KafkaConsumer
 import socketio
 import threading
 import json
 
+KAFKA_BOOTSTRAP_SERVERS = os.getenv(
+    "KAFKA_BOOTSTRAP_SERVERS",
+    "localhost:9092",
+)
+SOCKETIO_URL = os.getenv("SOCKETIO_URL", "http://localhost:5000")
+
 # 连接到本地的 SocketIO 服务
 sio = socketio.Client()
-sio.connect('http://localhost:5000')
+sio.connect(SOCKETIO_URL)
 
 def alert_consumer():
-    consumer = KafkaConsumer('btc_alert')
+    consumer = KafkaConsumer(
+        'btc_alert',
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+    )
     for msg in consumer:
         try:
             # 解析 JSON 数据
@@ -20,7 +31,10 @@ def alert_consumer():
             print("解析告警数据出错：", e)
 
 def price_consumer():
-    consumer = KafkaConsumer('btc_price')
+    consumer = KafkaConsumer(
+        'btc_price',
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+    )
     for msg in consumer:
         try:
             data = json.loads(msg.value.decode('utf8'))
@@ -31,7 +45,10 @@ def price_consumer():
             print("解析价格数据出错：", e)
 
 def change_consumer():
-    consumer = KafkaConsumer('btc_change')
+    consumer = KafkaConsumer(
+        'btc_change',
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+    )
     for msg in consumer:
         try:
             data = json.loads(msg.value.decode('utf8'))

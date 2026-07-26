@@ -1,9 +1,15 @@
+import os
+
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, async_mode='eventlet')
+socketio = SocketIO(app, async_mode='threading')
+
+APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
+APP_PORT = int(os.getenv("APP_PORT", "5000"))
+APP_DEBUG = os.getenv("APP_DEBUG", "false").lower() in {"1", "true", "yes", "on"}
 
 @app.route("/")
 def index():
@@ -25,4 +31,10 @@ def handle_btc_change(data):
     emit('btc_change', data, broadcast=True)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host="127.0.0.1", port=5000)
+    socketio.run(
+        app,
+        debug=APP_DEBUG,
+        host=APP_HOST,
+        port=APP_PORT,
+        allow_unsafe_werkzeug=True,
+    )

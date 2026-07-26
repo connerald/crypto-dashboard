@@ -1,0 +1,170 @@
+name: crypto-dashboard
+
+x-source-volume: &source-volume
+  type: bind
+  source: .
+  target: /workspace
+  read_only: true
+
+x-app-environment: &app-environment
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  PYTHONUNBUFFERED: "1"
+
+x-kafka-image-volumes: &kafka-image-volumes
+  - /etc/kafka/secrets
+  - /mnt/shared/config
+  - /var/lib/kafka/data
+
+x-app-service: &app-service
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: crypto-dashboard-app:dev
+  working_dir: /workspace
+  environment: *app-environment
+  volumes:
+    - *source-volume
+  restart: unless-stopped
+
+services:
+  kafka-volume-init:
+    image: apache/kafka:3.9.2
+    user: 0:0
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - chown -R 1000:1000 /tmp/kraft-combined-logs
+    volumes:
+      - kafka-data:/tmp/kraft-combined-logs
+    tmpfs: *kafka-image-volumes
+    restart: "no"
+
+  kafka:
+    image: apache/kafka:3.9.2
+    hostname: kafka
+    depends_on:
+      kafka-volume-init:
+        condition: service_completed_successfully
+    environment:
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: CONTROLLER://:9093,PLAINTEXT://:9092
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_NODE_ID: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka-data:/tmp/kraft-combined-logs
+    tmpfs: *kafka-image-volumes
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+    restart: unless-stopped
+
+  kafka-init:
+    image: apache/kafka:3.9.2
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - |
+        for topic in btc_price btc_alert btc_change; do
+          /opt/kafka/bin/kafka-topics.sh \
+            --bootstrap-server kafka:9092 \
+            --create \
+            --if-not-exists \
+            --topic "$$topic" \
+            --partitions 1 \
+            --replication-factor 1
+        done
+    tmpfs: *kafka-image-volumes
+    restart: "no"
+
+  web:
+    <<: *app-service
+    command:
+      - python
+      - crypto-dashboard/app.py
+    environment:
+      <<: *app-environment
+      APP_DEBUG: "false"
+      APP_HOST: 0.0.0.0
+      APP_PORT: "5000"
+    ports:
+      - 127.0.0.1:5000:5000
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen("http://127.0.0.1:5000/", timeout=2)
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+
+  consumer:
+    <<: *app-service
+    command:
+      - python
+      - crypto-dashboard/consumer.py
+    environment:
+      <<: *app-environment
+      SOCKETIO_URL: http://web:5000
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      web:
+        condition: service_healthy
+
+  spark:
+    <<: *app-service
+    command:
+      - spark-submit
+      - --master
+      - local[2]
+      - --conf
+      - spark.hadoop.fs.defaultFS=file:///
+      - --packages
+      - org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.9
+      - crypto-dashboard/spark_streaming.py
+    environment:
+      <<: *app-environment
+      SPARK_CHECKPOINT_LOCATION: /var/lib/crypto-dashboard/checkpoints
+    volumes:
+      - *source-volume
+      - spark-checkpoint:/var/lib/crypto-dashboard/checkpoints
+      - spark-ivy:/home/app/.ivy2
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  producer:
+    <<: *app-service
+    command:
+      - python
+      - crypto-dashboard/binance_producer.py
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+volumes:
+  kafka-data:
+  spark-checkpoint:
+  spark-ivy:
