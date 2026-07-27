@@ -1,19 +1,37 @@
+import json
 import os
+import threading
+import time
 
 from kafka import KafkaConsumer
 import socketio
-import threading
-import json
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv(
     "KAFKA_BOOTSTRAP_SERVERS",
     "localhost:9092",
 )
 SOCKETIO_URL = os.getenv("SOCKETIO_URL", "http://localhost:5000")
+SOCKETIO_RETRY_DELAY_SECONDS = 2
 
-# 连接到本地的 SocketIO 服务
-sio = socketio.Client()
-sio.connect(SOCKETIO_URL)
+sio = socketio.Client(
+    reconnection=True,
+    reconnection_attempts=0,
+)
+
+
+def connect_socketio():
+    while True:
+        try:
+            sio.connect(SOCKETIO_URL)
+            print(f"已连接 Socket.IO 服务：{SOCKETIO_URL}")
+            return
+        except socketio.exceptions.ConnectionError as error:
+            print(
+                f"连接 Socket.IO 服务失败：{error}；"
+                f"{SOCKETIO_RETRY_DELAY_SECONDS} 秒后重试"
+            )
+            time.sleep(SOCKETIO_RETRY_DELAY_SECONDS)
+
 
 def alert_consumer():
     consumer = KafkaConsumer(
@@ -58,10 +76,13 @@ def change_consumer():
         except Exception as e:
             print("解析涨跌幅数据出错：", e)
 
+
+def main():
+    connect_socketio()
+    for target in (alert_consumer, price_consumer, change_consumer):
+        threading.Thread(target=target, daemon=True).start()
+    sio.wait()
+
+
 if __name__ == '__main__':
-    threading.Thread(target=alert_consumer, daemon=True).start()
-    threading.Thread(target=price_consumer, daemon=True).start()
-    threading.Thread(target=change_consumer, daemon=True).start()
-    import time
-    while True:
-        time.sleep(10)
+    main()
