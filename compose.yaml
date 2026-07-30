@@ -146,7 +146,7 @@ services:
       - crypto-dashboard/spark_streaming.py
     environment:
       <<: *app-environment
-      SPARK_CHECKPOINT_LOCATION: /var/lib/crypto-dashboard/checkpoints
+      SPARK_CHECKPOINT_LOCATION: /var/lib/crypto-dashboard/checkpoints/rolling-60s-v1
     volumes:
       - *source-volume
       - spark-checkpoint:/var/lib/crypto-dashboard/checkpoints

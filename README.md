@@ -44,7 +44,7 @@ Compose 会按依赖顺序启动以下服务：
 | `kafka-init` | 幂等创建 `btc_price`、`btc_alert`、`btc_change` |
 | `web` | Flask-SocketIO 页面 |
 | `consumer` | 将 Kafka 消息转发给 Socket.IO |
-| `spark` | 计算一分钟窗口涨跌幅和告警 |
+| `spark` | 计算滚动一分钟涨跌幅和告警 |
 | `producer` | 从 Binance 获取 BTC/USDT 行情 |
 
 查看状态和日志：
@@ -57,6 +57,11 @@ docker compose logs --follow
 访问 [http://localhost:5000](http://localhost:5000)。只有 Web 的 `127.0.0.1:5000` 会映射到宿主机；Kafka 仅能通过 Compose 网络中的 `kafka:9092` 访问。
 
 页面使用 Socket.IO 4.x 客户端，服务端使用 Flask-SocketIO 5.x；升级或部署时应保持两端协议版本兼容并一同发布。
+
+涨跌幅按事件时间计算最近 60 秒内的首末价格，每 2 秒更新一次。Spark
+允许最多 10 秒的迟到数据，超过 watermark 的历史窗口会从状态存储中清理。
+滚动窗口使用独立的 `rolling-60s-v1` checkpoint 路径，因此升级后不会尝试
+用旧窗口的状态恢复新查询。
 
 ## 日常开发
 
@@ -71,6 +76,13 @@ docker compose restart web consumer spark producer
 ```bash
 docker compose build
 docker compose up --detach
+```
+
+在现有应用镜像中运行全部测试：
+
+```bash
+docker compose run --rm --no-deps web \
+  python -m unittest discover -s tests -v
 ```
 
 查看 Kafka Topic：
