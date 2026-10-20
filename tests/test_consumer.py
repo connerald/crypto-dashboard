@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import unittest
 from unittest.mock import Mock, call, patch
@@ -14,6 +15,35 @@ MODULE_PATH = (
 SPEC = importlib.util.spec_from_file_location("consumer", MODULE_PATH)
 consumer = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(consumer)
+
+
+class PriceConsumerTests(unittest.TestCase):
+    def test_preserves_trade_timestamp_when_forwarding_price(self):
+        payload = {'price': 67234.5, 'ts': 1720000000123}
+        message = Mock(value=json.dumps(payload).encode('utf8'))
+
+        with (
+            patch.object(consumer, 'KafkaConsumer', return_value=[message]),
+            patch.object(consumer.sio, 'emit') as emit,
+        ):
+            consumer.price_consumer()
+
+        emit.assert_called_once_with('btc_price', payload)
+
+    def test_skips_price_without_timestamp_and_continues_consuming(self):
+        valid = {'price': 67234.5, 'ts': 1720000000123}
+        messages = [
+            Mock(value=json.dumps(payload).encode('utf8'))
+            for payload in ({'price': 67000.0}, valid)
+        ]
+
+        with (
+            patch.object(consumer, 'KafkaConsumer', return_value=messages),
+            patch.object(consumer.sio, 'emit') as emit,
+        ):
+            consumer.price_consumer()
+
+        emit.assert_called_once_with('btc_price', valid)
 
 
 class SocketIOConnectionTests(unittest.TestCase):

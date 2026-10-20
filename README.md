@@ -58,6 +58,10 @@ docker compose logs --follow
 
 页面使用 Socket.IO 4.x 客户端，服务端使用 Flask-SocketIO 5.x；升级或部署时应保持两端协议版本兼容并一同发布。
 
+价格消息中的 `ts` 为 Binance 成交时间（Unix 毫秒），经 Kafka、consumer 和
+Socket.IO 原样传递。价格曲线按该成交时间绘点；缺少有效时间戳的消息不会绘入曲线，
+也不会用浏览器接收时间替代。
+
 涨跌幅按事件时间计算最近 60 秒内的首末价格，每 2 秒更新一次。Spark
 允许最多 10 秒的迟到数据，超过 watermark 的历史窗口会从状态存储中清理。
 滚动窗口使用独立的 `rolling-60s-v1` checkpoint 路径，因此升级后不会尝试
@@ -83,6 +87,12 @@ docker compose up --detach
 ```bash
 docker compose run --rm --no-deps web \
   python -m unittest discover -s tests -v
+```
+
+前端事件时间回归测试可在安装了 Node.js 的开发环境中单独运行（不影响应用运行依赖）：
+
+```bash
+node --test tests/test_dashboard.cjs
 ```
 
 查看 Kafka Topic：

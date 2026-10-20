@@ -57,8 +57,9 @@ def price_consumer():
         try:
             data = json.loads(msg.value.decode('utf8'))
             price = data.get('price')
+            timestamp = data['ts']
             print("收到价格数据：", price)
-            sio.emit('btc_price', {'price': price})
+            sio.emit('btc_price', {'price': price, 'ts': timestamp})
         except Exception as e:
             print("解析价格数据出错：", e)
 

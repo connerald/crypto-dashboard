@@ -39,8 +39,12 @@
         // 价格数据处理
         socket.on('btc_price', function(msg) {
             var price = parseFloat(msg.price);
-            var now = (new Date()).getTime();
-            chart.series[0].addPoint([now, price], true, chart.series[0].data.length > 60);
+            // ts 是 Binance 成交时间（Unix 毫秒），不使用浏览器接收时间兜底。
+            var timestamp = msg.ts;
+            if (!Number.isFinite(price) || !Number.isSafeInteger(timestamp) || timestamp <= 0) {
+                return;
+            }
+            chart.series[0].addPoint([timestamp, price], true, chart.series[0].data.length > 60);
             document.getElementById('price').innerText = price;
             console.log("最新BTC价格：", price);
         });
